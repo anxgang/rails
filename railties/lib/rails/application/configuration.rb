@@ -21,7 +21,8 @@ module Rails
                     :beginning_of_week, :filter_redirect, :x,
                     :read_encrypted_secrets, :content_security_policy_report_only,
                     :content_security_policy_nonce_generator, :content_security_policy_nonce_directives,
-                    :require_master_key, :credentials, :disable_sandbox, :sandbox_by_default,
+                    :require_master_key, :credentials, :credentials_example_watcher, 
+                    :disable_sandbox, :sandbox_by_default,
                     :add_autoload_paths_to_load_path, :rake_eager_load, :server_timing, :log_file_size,
                     :dom_testing_default_html_version
 
@@ -76,6 +77,7 @@ module Rails
         @require_master_key                      = false
         @loaded_config_version                   = nil
         @credentials                             = ActiveSupport::InheritableOptions.new(credentials_defaults)
+        @credentials_example_watcher             = false
         @disable_sandbox                         = false
         @sandbox_by_default                      = false
         @add_autoload_paths_to_load_path         = true
@@ -598,7 +600,10 @@ module Rails
           key_path = root.join("config/credentials/#{Rails.env}.key")
           key_path = root.join("config/master.key") if !key_path.exist?
 
-          { content_path: content_path, key_path: key_path }
+          example_path = root.join("config/credentials/#{Rails.env}.yml.example")
+          example_path = root.join("config/credentials.yml.example") if !example_path.exist?
+
+          { content_path: content_path, key_path: key_path, example_path: example_path }
         end
     end
   end

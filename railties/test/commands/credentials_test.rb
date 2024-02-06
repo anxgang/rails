@@ -295,6 +295,37 @@ class Rails::Command::CredentialsTest < ActiveSupport::TestCase
     assert_match(encrypted_content, run_diff_command(content_path))
   end
 
+  test "example credentials" do
+    assert_match /Generate file: config\/credentials.yml.example/, run_example_command
+  end
+
+  test "example command raises error when require_master_key is specified and key does not exist" do
+    remove_file "config/master.key"
+    add_to_config "config.require_master_key = true"
+
+    assert_match(/Missing encryption key to decrypt file with/, run_example_command(allow_failure: true))
+  end
+
+  test "example command does not raise error when require_master_key is false and master key does not exist" do
+    remove_file "config/master.key"
+    add_to_config "config.require_master_key = false"
+
+    assert_match(/Missing 'config\/master\.key' to decrypt credentials/, run_example_command)
+  end
+
+  test "example command displays content specified by environment option" do
+    write_credentials "foo: bar", environment: "production"
+    run_example_command(environment: "production")
+
+    assert_match %r/foo: xxx/, read_file("config/credentials/production.yml.example")
+  end
+
+  test "example command properly expands environment option" do
+    write_credentials "foo: bar", environment: "production"
+    run_example_command(environment: "prod")
+
+    assert_match %r/foo: xxx/, read_file("config/credentials/production.yml.example")
+  end
 
   test "respects config.credentials.content_path when set in config/application.rb" do
     content_path = "my_secrets/credentials.yml.enc"
@@ -356,6 +387,11 @@ class Rails::Command::CredentialsTest < ActiveSupport::TestCase
     def run_diff_command(path = nil, enroll: nil, disenroll: nil, **options)
       args = [path, ("--enroll" if enroll), ("--disenroll" if disenroll)].compact
       rails "credentials:diff", args, **options
+    end
+
+    def run_example_command(environment: nil, **options)
+      args = environment ? ["--environment", environment] : []
+      rails "credentials:example", args, **options
     end
 
     def write_credentials(content, **options)

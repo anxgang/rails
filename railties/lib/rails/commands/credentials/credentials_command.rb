@@ -22,6 +22,7 @@ module Rails
         if environment_specified?
           @content_path = "config/credentials/#{environment}.yml.enc" unless config.overridden?(:content_path)
           @key_path = "config/credentials/#{environment}.key" unless config.overridden?(:key_path)
+          @example_path = "config/credentials/#{environment}.yml.example" unless config.overridden?(:example_path)
         end
 
         ensure_encryption_key_has_been_added
@@ -57,6 +58,19 @@ module Rails
         say credentials.content_path.read
       end
 
+      desc "example", "Create an example credentials file from the encrypted credentials"
+      def example
+        load_environment_config!
+
+        if environment_specified?
+          @content_path = "config/credentials/#{environment}.yml.enc" unless config.overridden?(:content_path)
+          @key_path = "config/credentials/#{environment}.key" unless config.overridden?(:key_path)
+          @example_path = "config/credentials/#{environment}.yml.example" unless config.overridden?(:example_path)
+        end
+
+        say generate_example_file || missing_credentials_message
+      end
+
       private
         def config
           Rails.application.config.credentials
@@ -68,6 +82,10 @@ module Rails
 
         def key_path
           @key_path ||= relative_path(config.key_path)
+        end
+        
+        def example_path
+          @example_path ||= relative_path(config.example_path)
         end
 
         def credentials
@@ -99,6 +117,7 @@ module Rails
             say "Editing #{content_path}..."
             credentials.change { |tmp_path| system_editor(tmp_path) }
             say "File encrypted and saved."
+            say generate_example_file if Rails.application.config.credentials_example_watcher
             warn_if_credentials_are_invalid
           end
         rescue ActiveSupport::EncryptedFile::MissingKeyError => error
@@ -129,6 +148,33 @@ module Rails
 
         def extract_environment_from_path(path)
           available_environments.find { |env| path.end_with?("#{env}.yml.enc") }
+        end
+
+        def generate_example_file
+          data = credentials.read.presence
+          return if data.nil?
+
+          yaml_data = YAML.load(data)
+          mask_and_flatten_values(yaml_data).each do |orig_value, mask_value|
+            data.sub!(/(?<!#)(#{orig_value})/, mask_value)
+            # data.sub!(/(?<=(\-|\:)\s)(\s?#{orig_value}\s?)([^#\n]+)/, mask_value)
+          end
+
+          File.write(example_path, data)
+          "Generate file: #{example_path}"
+        end
+
+        def mask_and_flatten_values(data, values=[])
+          data = data.is_a?(Hash) ? data.map { |key, value| value } : data
+          data.each do |value|
+            if [Hash, Array].include?(value.class)
+              mask_and_flatten_values(value, values)
+              next
+            end
+
+            values << [value.to_s, 'x' * [value.to_s.size, 10].max]
+          end
+          values
         end
     end
   end

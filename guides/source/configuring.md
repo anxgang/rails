@@ -302,6 +302,23 @@ Defaults to `config/credentials/#{Rails.env}.key` if it exists, or
 NOTE: In order for the `bin/rails credentials` commands to recognize this value,
 it must be set in `config/application.rb` or `config/environments/#{Rails.env}.rb`.
 
+#### `config.credentials.example_path`
+
+The path of the encrypted credentials example file.
+
+Defaults to `config/credentials/#{Rails.env}.yml.example` if it exists, or
+`config/credentials.yml.example` otherwise.
+
+NOTE: In order for the `bin/rails credentials` commands to recognize this value,
+it must be set in `config/application.rb` or `config/environments/#{Rails.env}.rb`.
+
+#### `config.credentials_example_watcher`
+
+Enables generating or updating example file after editing credentials. Defaults to
+`false`.
+
+NOTE: Comments are not encrypted
+
 #### `config.debug_exception_response_format`
 
 Sets the format used in responses when errors occur in the development environment. Defaults to `:api` for API only apps and `:default` for normal apps.
